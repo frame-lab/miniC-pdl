@@ -1,0 +1,10 @@
+miniCmc - compiles a miniC program to PDL or to an SMV file
+Usage: miniCmc <input file> [-pdl <file>] [-smv <file>]
+  -h                prints this help
+  -int <from> <to>  sets integer range
+  -integer          sets int variables as integers (non-compatible with BDD)
+  -pdl <file>       sets output file for PDL program
+  -positive         uses only non-negative integer
+  -smv <file>       sets output smv file
+  -32b              sets integer size to 32 bits (default option)
+  -64b              sets integer size to 64 bits

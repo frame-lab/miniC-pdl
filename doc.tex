@@ -1,0 +1,425 @@
+\documentclass{article}
+
+%\usepackage{algorithm}
+%\usepackage{algorithmic}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage{enumerate}
+\usepackage{float}
+\usepackage[utf8x]{inputenc}
+
+%Usar pacote para gramática: grammar
+
+\title{Compiler C to PDL}
+\date{09-08-2018}
+\author{Philippe Geraldeli Araujo e Allan Patrick}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definição}
+
+\begin{document}
+
+\maketitle
+\pagenumbering{gobble}
+\newpage
+\pagenumbering{arabic}
+
+\section{C to PDL}
+
+\paragraph{Fork do miniC feito por eubnara\\}
+Este compilador tem o objetivo de converter C para PDL(Propositional Dynamic Logic). \vspace{10mm}
+
+\noindent \small 
+Program := (DeclList)? (FuncList)?   // DeclList FuncList ou DeclList ou FuncList  \\
+DeclList := (Declaration)+          // Declaration ou DeclList Declaration \\
+FuncList := (Function)+ \\ 
+Declaration := Type IdentList \\
+IdentList := identifier (, identifier)*  // identifier ou IdentList , identifier \\
+Identifier := id ou id [ intnum ]      // (Note) [, ] are not symbols used in regular expression \\
+Function := Type id ( (ParamList)? ) CompoundStmt \\
+ParamList := Type identifier (, Type identifier)* \\
+Type := int ou float \\
+CompoundStmt := { (DeclList)? StmtList } \\
+StmtList := (Stmt)* \\
+Stmt := AssignStmt ou CallStmt ou RetStmt ou WhileStmt ou ForStmt ou IfStmt ou CompoundStmt ou ; \\
+AssignStmt :=Assign  \\
+Assign := id = Expr ou id [ Expr ] = Expr \\
+CallStmt := Call ; \\
+Call := id ( (ArgList)? ) \\
+RetStmt := return (Expr)? ;  \\
+Expr := MINUS Expr $|$ MathRel Eqltop Expr $|$ MathRel $|$ Call $|$ Ids \\
+MathRel := MathEql Relaop MathRel $|$ MathEql \\
+MathEql := TERM Addiop MathEql $|$ TERM \\
+TERM := FACTOR Multop TERM $|$ FACTOR \\
+FACTOR := '(' Expr ')' $|$ FLOATNUM $|$ INTNUM \\
+Id := ID $|$ ID [ Expr ] \\
+
+
+
+So, Our miniC program doesn't follow the rule below.  \\
+    1. ++, --  \\
+    2. According to this rule  :=  CompoundStmt := { (DeclList)? StmtList }  \\
+
+\section{Algorithm Converter} 
+Input = Arquivo em C \\
+Output = Arvore/Arquivo
+\vspace{10mm}
+
+\begin{algorithm}
+
+\caption{BuildTree(Program* head)}
+
+\If{headDeclaration != NULL}{
+	visitDeclaration(headDeclaration)\;
+}
+\If{headFunction != NULL}{
+	visitFunction(headFunction)\;
+}
+
+\end{algorithm}
+
+\BlankLine
+
+\begin{algorithm}
+\caption{visitDeclaration(DECLARATION* decl)}
+
+\If{DeclList}{
+	\If{Declaration}{
+		 insert(declarationType)\;
+		 insert(declarationId)\;
+		 
+	}
+	\If{DeclList}{
+		visitDeclaration(previousDeclaration)\;
+	}
+}
+
+
+
+
+\end{algorithm}
+%\vspace{-10mm}
+\begin{algorithm}
+
+\caption{visitFunction(FUNCTION* func)}
+
+\If{FunctionList}{
+	\If{FunctionList}{
+		visitFunction(previousFunction)\;
+	}
+	\If{Function}{
+		 insert('(')\;
+		 \If{funcParameter != NULL}{
+		 	insert(funcParameter)\;
+		 }
+		 visitCompoundStmt(FunctionCstmt)\;
+	}
+}
+
+
+
+
+\end{algorithm}
+
+\begin{algorithm}
+
+\caption{visitCompoundStmt(COMPOUNDSTMT* cstmt)}
+
+\If{cstmtDeclaration != NULL}{
+	visitDeclaration{cstmtDeclaration}\;
+}
+\If{cstmtStatement != NULL}{
+	visitStmt(cstmtStatement)\;
+}
+
+\end{algorithm}
+
+\begin{algorithm}
+
+\caption{visitStmt(Stmt* stmt)}
+
+\Switch{stmtS}{
+	\Case{Assign}{
+		InsertSemicolon()\;
+		insert(stmtS\_AssignID)\;
+		insert("=")\;
+		insert(stmtS\_AssignExpression)\;
+	}
+	\Case{Call}{
+		insertSemicolon()\;
+		insert(stmtSCallIdentifier)\;
+		insert(CallArg)\;
+	}
+	\Case{Return}{
+		\eIf{Stmt\_Return == NULL}{
+			insert("return")\;
+		}{
+			insert("return")\;
+			visitStmt(stmtS\_Return)\;
+		}
+	}
+	\Case{While}{
+		\eIf{StmtSdo\_while == true}{
+			visitStmt(stmtS\_while)\;
+			insert(WhileCondition)\;
+			visitStmt(stmtS\_while)\;
+			insert(")*;$\neg$(")\;
+		}{
+			insert(WhileCondition)\;
+			visitStmt(stmtS\_while)\;
+			insert(")*$\neg$")\;
+			insert(WhileCondition)\;
+		}
+	}
+	\Case{For}{
+		visitStmtS(StmtSAssign)\;
+		insert(ForCondition)\;
+		visitStmt(stmtS\_For)\;
+		visitStmt(stmtS\_ForInc)\;
+		insert(ForCondition)\;
+
+	}
+	\Case{If}{
+		insert(If\_condition)\;
+		VisitStmt(stmtS\_if)\;
+		\If{stmtSelse != NULL}{
+			insert(IfCondition)\;
+			%visitExpr(stmtScondition)\;
+			visitStmt(stmtSelse)\;
+		}
+	}
+	\Case{CompoundStmt}{
+		visitCompoundStmt{stmtS}\;
+	}
+	\Case{Semicolon}{
+		insert("$;$")\;
+	}
+}
+\end{algorithm}
+
+%\vspace{-50mm}
+
+\section{Prova de corretude do algoritmo:}
+
+Em PDL temos duas estruturas importantes, sendo elas programas e fórmulas, programas atômicos são os menores programas possíveis e formulas atômicas são as menores formulas possíveis. Nesse algoritmo um programa atômico tem no máximo 1 operando, foi escolhido essa forma por convenção de 3 registradores. Sendo assim, toda declaração de variável e função de atribuição com apenas 1 operador, um programa atômico, logo uma lista de declarações é uma lista de programas atômicos. Por exemplo:\\
+\BlankLine
+int i $\rightarrow$ [int i] \\
+\BlankLine
+Int i = 10 $\rightarrow$ declaração: [int i] $|$ Função: [i = 10] \\
+\BlankLine
+Um programa pode ser descrito como uma lista de declarações ou uma lista de funções, sendo que pela recursão toda concatenação dos mesmos é tratada e as declarações são tratadas de forma vista anteriormente. \\
+\BlankLine
+No caso de termos uma função vai recair em casos mais específicos que vão ser tratados isoladamente. Como por construção a recursão cuida de tratar o caso mais interno para o mais externo recairemos sempre sobre o caso mais básico. Temos então os casos das estruturas de repetição, condição e escopo. A condição de escopo é a mais simples, pois como em PDL é ignorado, um escopo é estruturado toda vez que a recursão entra em uma função, logo esse caso é ignorado pela conversão. Logo mostraremos que para um caso genérico Sigma de um subconjunto de C todas as transformações feitas são válidas já que temos prova de que as transformações de uma linguagem de programação para PDL está correto comprovadamente, logo iremos mostrar que a nossa conversão de algoritmo equivale a conversão que já está comprovada.\\
+\BlankLine
+Dado pela definição de PDL no livro [1] o Assign é dado pela seguinte forma:\\
+\BlankLine
+int i = 1 + 2 + 3 $\rightarrow$ declaração: [int i] $|$ função: [ i = 1 + 2 + 3]\\
+\BlankLine
+Como visto anteriormente toda função Assign utiliza apenas 1 operando para o nosso algoritmo, logo no caso de mais operandos é utilizado Identifiers auxiliares para esse quesito, por exemplo:\\
+\BlankLine
+int j = 1 $\rightarrow$ declaração: [int j] $|$ função: [ j = 1 ] \\
+\BlankLine
+
+\begin{algorithm}
+	\caption{void Parts(struct EXPR* expr)}
+	
+	char var[] = "\_tX"\;
+	int buffersize = 100\;
+	char* variable = malloc(buffersize)\;
+	
+	\Switch{exprE}{
+		\Case{eId}{
+			var[2] = ++x + '0'\;
+			strncpy(variable,var,buffersize)\;
+			Parts3[tam][0] = variable\;
+			tam++\;
+		}
+		\Case{eIntnum}{
+			var[2] = ++x + '0'\;
+			strncpy(variable,var,buffersize)\;
+			Parts3[tam][0] = variable\;
+			tam++\;
+		}
+		\Case{eFloatnum}{
+			var[2] = ++x + '0'\;
+			strncpy(variable,var,buffersize)\;
+			Parts3[tam][0] = variable\;
+			tam++\;
+		}		
+	}
+\end{algorithm}
+
+	Na função Parts temos que:
+	\BlankLine
+	Na linha 1 é criado o nome da variável. 
+	Na linha 2,3  é criado um buffer de tamanho 100, para alocar todas as variáveis necessárias.
+	Na linha 8,13,18 é adicionado na tabela o nome da variável.
+	\BlankLine
+	Logo temos que para o caso simples de 1 operando é trivial verificar que as transformações são idênticas, pois é fácil ver que é uma adição direta na arvore. Para n > 1 operandos temos que é fácil ver ficar também visto que para uma função genérica teremos:
+	\BlankLine
+	int g = n + (n+1) + (n+2) + (n+3) + ... + (n+m)
+	\BlankLine
+	
+logo a transformação da declaração ficará: 
+	\BlankLine
+	aux n   = ( n + (m-1) ) + (n+m)  
+	aux n-1 = ( n + (m-2) ) + aux n 
+	aux n-2 = ( n + (m-3) ) + aux n-1 
+	... 
+	aux = (n+1) + aux 2 
+	\BlankLine
+	g = (n) + aux 
+	\BlankLine
+	O compilador faz essa conversão na função visitExpr2, tendo então que esta transformação é trivialmente transformada em: 
+	\BlankLine
+	int g = n + (n+1) + (n+2) + (n+3) + ... + (n+m)
+	\BlankLine
+	Logo como a conversão é equivalente a definição está correto.
+	\BlankLine
+
+
+	\subsection{Caso do IF}
+		A conversão para PDL de um if simples ocorre da seguinte forma:
+			\begin{definition}[Condicional]
+		if a then b else c $\rightarrow$ $a?;b\cup\neg a?;c$
+			\end{definition}
+	
+	Temos que o compilador faz essa conversão da seguinte forma:
+	
+	\begin{algorithm}[hbt]
+		\caption{(void visitIf\_s2(struct IF\_S* if\_s))}
+		scopeTail = newScope(sIF, scopeTail)\;
+		\_isTitlePrinted2 = false\;
+		scopeTail$\rightarrow$parent$\rightarrow$if\_n++\;
+		
+		insert(aux, "child", "( (")\;
+		aux2 = aux\;
+		visitExpr2(if\_s$\rightarrow$cond)\;
+		insert(aux,"child",")? ")\;
+		\If{if\_s$\rightarrow$if\_$\rightarrow$s}{
+			insert(aux,"child",";")\;
+		}
+		visitStmt2(if\_s$\rightarrow$if\_)\;
+		insert(aux,"child"," )")\;
+		\If{if\_s$\rightarrow$else\_ != NULL}{
+			insert(aux, "child", "U($\neg$(")\;
+			aux2 = aux\;
+			visitExpr2(if\_s$\rightarrow$cond)\;
+			insert(aux,"child",")? ")\;
+			\If{if\_s$\rightarrow$else\_$\rightarrow$s}{
+				insert(aux,"child",";")\;
+			}
+			visitStmt2(if\_s$\rightarrow$else\_)\;
+			insert(aux, "child", ")")\;
+		}
+	\end{algorithm}
+\begin{enumerate}[(i)]
+\item	Na linha 4 adiciona dois escopos de parêntese na arvore.
+\item	Na linha 6 procura a condição do if para adicionar em seguida no visitExpr2.
+\item	Na linha 7 fecha o parêntese e adiciona o “?”.
+\item	Na linha 10 vai para o Stmt do if.
+\item	Na linha 13 é checado se existe um else, caso exista é adicionado o “U($\neg$(“ na linha 12.
+\item	Na linha 17 é adicionado a condição novamente.
+\item	Na linha 18 termina o escopo do if.
+\end{enumerate}
+	
+	Logo podemos inferir que os 2 casos de if são trivialmente equivalentes aos casos que ocorrem na definição de PDL.O algoritmo faz essa conversão e insere na árvore os casos possíveis gerando ramificações. Assim levando ao caso base de cada ramificação e sendo tratada pela recursão.
+	
+	\subsection{Caso Call}
+		Nesse caso o que estamos fazendo na prática é nada mais nada menos que entrando em uma função normalmente, logo quando temos a chamada de uma função externa é fácil ver que é apenas uma função que será inserida na árvore normalmente.
+	
+	\subsection{Caso While e doWhile}
+		O * no PDL é representado da forma que pode ser repetido zero ou mais vezes, logo não temos controle por quantas iterações que serão executadas no programa, no while temos essa abstração.
+		
+		Temos que a conversão de um while para PDL ocorre da seguinte forma de acordo com a definição:
+		
+			\begin{theorem}
+			While a do b $\rightarrow$ (a?;b)*;$\neg$a?
+			\end{theorem}
+		
+		Temos então o algoritmo do while:
+		
+		\begin{algorithm}
+			\eIf{while\_s$\rightarrow$do\_while == true}{
+			insert(aux, "child", "(")\;
+			visitStmt2(while\_s$\rightarrow$stmt)\;
+			insert(aux, "child", "(")\;
+			aux2 = aux\;
+			visitExpr2(while\_s$\rightarrow$cond)\;
+			insert(aux,"child",")?")\;
+			insert(aux, "child", ")*;$\neg$(")\;
+			aux2 = aux\;
+			visitExpr2(while\_s$\rightarrow$cond)\;
+			insert(aux,"child",")? ")\;
+			}{
+			insert(aux, "child", "( (")\;
+			aux2 = aux\;
+			visitExpr2(while\_s$\rightarrow$cond)\;
+			insert(aux,"child",")?")\;
+			visitStmt2(while\_s$\rightarrow$stmt)\;
+			insert(aux, "child", ")*;$\neg$(")\;
+			aux2 = aux\;
+			visitExpr2(while\_s$\rightarrow$cond)\;
+			insert(aux,"child",")?")\;
+			}
+		\end{algorithm}
+	
+		Nas linhas 1,12 é feito um teste caso seja um dowhile ou um while, no caso de ser um do while ele irá continuar na linha 2, caso contrário na linha 12.
+		Na linha 2 é inserida um parêntese.
+		Na linha 3 é adicionado uma vez tudo que possui dentro do while.
+		Na linha 4 é feito mais uma adição de parêntese.
+		Na linha 6 é adicionado a condição do dowhile.
+		Na linha 8 é tratado da forma de um while normal.
+		Na linha 13 é adicionado 2 parênteses.
+		Na linha 15 é adicionado a condição do while.
+		Na linha 16 se fecha o parênteses e adiciona o “?”.
+		Na linha 17 é adicionado tudo que o while possui internamente.
+		Na linha 18,20,21 é adicionado a negação da condição e adicionado um ponto de interrogação.
+		
+		\section{Caso For}
+		
+		O for também pode ser tratada da mesma forma que o while mas com algumas ressalvas.Logo temos que a conversão de for para PDL ocorre da seguinte forma, no for temos 3 campos, o de declaração, condição e incremento. Sendo d a declaração, c a condição e i o incremento, temos o seguinte exemplo:
+		
+		\begin{algorithm}
+			\For{c}{
+				E\;
+			}
+		\end{algorithm}
+		
+		Assim a conversão é feita da seguinte forma:
+			
+		(d;c?;E;i)*$\neg$c?
+		
+		No algoritmo temos que:
+		
+		\begin{algorithm}
+			\caption{visitFor\_s2 (struct FOR\_S* for\_s)}
+			insert(aux, "child","(")\;
+			visitAssignStmt2(for\_s$\rightarrow$init)\;
+			insert(aux,"child",";(")\;
+			aux2 = aux\;
+			visitExpr2(for\_s$\rightarrow$cond)\;
+			insert(aux,"child",")?")\;
+			insert(aux, "child", "; ")\;
+			visitStmt2(for\_s$\rightarrow$stmt)\;
+			insert(aux,"child", "; ")\;
+			visitAssignStmt2(for\_s$\rightarrow$inc)\;
+			insert(aux,"child",")*;$\neg$(")\;
+			aux2 = aux\;
+			visitExpr2(for\_s$\rightarrow$cond)\;
+			insert(aux,"child",")?$\neg$for\_s$\rightarrow$cond")\;
+		\end{algorithm}
+	
+		Na linha 1 é adicionado um parêntese.
+		Na linha 2 é adicionado a declaração dentro do for, dado como “for\_s$\rightarrow$init”
+		Na linha 3 é adicionado mais um parêntese.
+		Na linha 5 é adicionada toda a condição do for.
+		Na linha 6 se fecha o parêntese da condição do for.
+		Na linha 8 é adicionado tudo que estava dentro do for.
+		Na linha 10 é adicionado o campo de incremento.
+		
+		
+		Logo podemos verificar trivialmente que a definição do for no PDL dado em [1] e a conversão do compilador são equivalentes e portanto temos que a corretude do for do compilador está correta visto que a corretude de conversão para o pdl está correta.Por fim como estes elementos englobam todo o escopo do subconjunto de c utilizado pelo algoritmo temos que a corretude do mesmo está correta visto que a corretude de cada elemento está correta
+		
+		\bibliographystyle{apa}
+		\bibliography{referencias}
+\end{document}

@@ -1,0 +1,17 @@
+Program -> DL + FL | DL | FL
+DL -> D | DL + D
+FL -> F | FL + F
+D -> Type + idL + ";"
+F-> Type + id + paramlist + compoundstmt
+Type -> int | float
+int -> id
+float -> id
+idL -> ident | idL + ident
+Paramlist -> param | paramList + "," + param
+param -> Type + ident
+Compoundstmt -> "{" + "}" | "{" + stmtlist + "}"| "{" + DL + stmtlist + "}"
+stmtlist -> stmt | stmtlist + stmt
+stmt -> AssingSTMT | Callstmt | retstmt | while_s | for_s | if_s | compoundstmt | ";"
+Assingstmt -> assing + ";"
+assing -> id + "=" + Expr | id + "[" + Expr + "]" + "=" + Expr
+...
